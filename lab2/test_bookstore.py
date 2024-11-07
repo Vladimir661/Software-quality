@@ -1,34 +1,59 @@
 import pytest
 from bookstore import Bookstore
-from models import Book
 
-@pytest.fixture
-def bookstore():
-    return Bookstore()
+def test_add_book():
+    store = Bookstore()
+    store.add_book("Book1", "Author1", 10.0, 5)
+    assert store.search_book("Book1") == {"author": "Author1", "price": 10.0, "quantity": 5}
 
-def test_add_book(bookstore):
-    bookstore.add_book("Python 101", "John Doe", "1234567890", 29.99, 10)
-    assert len(bookstore.inventory) == 1
+    store.add_book("Book1", "Author1", 10.0, 3)
+    assert store.search_book("Book1")["quantity"] == 8
 
-def test_add_duplicate_isbn(bookstore):
-    bookstore.add_book("Python 101", "John Doe", "1234567890", 29.99, 10)
+def test_remove_book():
+    store = Bookstore()
+    store.add_book("Book1", "Author1", 10.0, 5)
+    store.remove_book("Book1")
+    assert store.search_book("Book1") is None
+
+    store.remove_book("NonExistentBook")
+
+def test_search_book():
+    store = Bookstore()
+    store.add_book("Book1", "Author1", 10.0, 5)
+    assert store.search_book("Book1") == {"author": "Author1", "price": 10.0, "quantity": 5}
+    assert store.search_book("NonExistentBook") is None
+
+def test_purchase_book():
+    store = Bookstore()
+    store.add_book("Book1", "Author1", 10.0, 5)
+    total_price = store.purchase_book("Book1", 2)
+    assert total_price == 20.0
+    assert store.search_book("Book1")["quantity"] == 3
+
     with pytest.raises(ValueError):
-        bookstore.add_book("Python Advanced", "Jane Smith", "1234567890", 35.99, 5)
+        store.purchase_book("Book1", 10)
 
-def test_purchase_book(bookstore):
-    bookstore.add_book("Python 101", "John Doe", "1234567890", 29.99, 10)
-    order = bookstore.purchase_book("1234567890", 2)
-    assert order.total_cost == 59.98
+    with pytest.raises(ValueError):
+        store.purchase_book("NonExistentBook", 1)
 
-def test_search_books(bookstore):
-    bookstore.add_book("Python 101", "John Doe", "1234567890", 29.99, 10)
-    bookstore.add_book("Python Advanced", "Jane Smith", "0987654321", 35.99, 5)
-    results = bookstore.search_books(title="Python 101")
-    assert len(results) == 1
-    assert results[0]["title"] == "Python 101"
+def test_inventory_value():
+    store = Bookstore()
+    store.add_book("Book1", "Author1", 10.0, 5)
+    store.add_book("Book2", "Author2", 20.0, 3)
+    assert store.inventory_value() == 110.0
 
-def test_track_order(bookstore):
-    bookstore.add_book("Python 101", "John Doe", "1234567890", 29.99, 10)
-    order = bookstore.purchase_book("1234567890", 2)
-    status = bookstore.track_order(order.id)
-    assert status.status == "Processing"
+def test_edge_cases():
+    store = Bookstore()
+
+    with pytest.raises(ValueError):
+        store.add_book("Book1", "Author1", -10.0, 5)
+    with pytest.raises(ValueError):
+        store.add_book("Book1", "Author1", 10.0, -5)
+
+    store.add_book("Book2", "Author2", 15.0, 0)
+    with pytest.raises(ValueError):
+        store.purchase_book("Book2", 1)
+
+    store.remove_book("NonExistentBook")
+
+    assert store.search_book("") is None
